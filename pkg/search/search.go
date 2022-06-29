@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -65,18 +66,25 @@ func Found(Line string, phrase string) (int, bool) {
 //All ищет все вхождения phrase в текстовых файлах files.
 func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	ch := make(chan []Result)
+	wg := sync.WaitGroup{}
+	wg.Add(len(files))
 	for _, file := range files {
 		result := FoundPhrase(file, phrase)
 		go func(ctx context.Context, result []Result, ch chan<- []Result) {
+			defer wg.Done()
 			want := rand.Intn(10)
 			select {
 			case <-ctx.Done():
 				return
-			case <-time.After(time.Second * time.Duration(want)):
+			case <-time.After(time.Duration(want)):
 				ch <- result
 			}
 		}(ctx, result, ch)
 	}
+	go func() {
+		defer close(ch)
+		wg.Wait()
+	}()
 	return ch
 
 }
