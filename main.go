@@ -15,6 +15,9 @@ func main() {
 		log.Print(i)
 	}
 	<-time.After(time.Millisecond)
+	log.Print("-----------------------------------------")
+	for i := range search.Any(ctx, "want", files) {
+		log.Print(i)
+	}
 	cancel()
-
 }

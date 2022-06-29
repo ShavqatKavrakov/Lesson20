@@ -88,3 +88,31 @@ func All(ctx context.Context, phrase string, files []string) <-chan []Result {
 	return ch
 
 }
+
+//Any ищет одно вхождения phrase в текстовых файлах files.
+func Any(root context.Context, phrase string, files []string) <-chan []Result {
+	ch := make(chan []Result)
+	ctx, cancel := context.WithCancel(root)
+	for _, file := range files {
+		result := FoundPhrase(file, phrase)
+		go func(ctx context.Context, result []Result, ch chan<- []Result) {
+			want := rand.Intn(10)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(time.Duration(want)):
+				ch <- result
+			}
+		}(ctx, result, ch)
+	}
+	winner := <-ch
+	cancel()
+	chResult := make(chan []Result, 1)
+	chResult <- winner
+	go func() {
+		close(ch)
+		close(chResult)
+	}()
+	return chResult
+
+}
